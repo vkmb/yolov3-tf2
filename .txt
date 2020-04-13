@@ -1,0 +1,2 @@
+2 tf.Tensor(0.34351683, shape=(), dtype=float32) tf.Tensor(0.14530566, shape=(), dtype=float32) tf.Tensor(0.56870943, shape=(), dtype=float32) tf.Tensor(0.98719656, shape=(), dtype=float32)
+2 tf.Tensor(0.34351683, shape=(), dtype=float32) tf.Tensor(0.14530566, shape=(), dtype=float32) tf.Tensor(0.56870943, shape=(), dtype=float32) tf.Tensor(0.98719656, shape=(), dtype=float32)

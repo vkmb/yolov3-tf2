@@ -61,7 +61,7 @@ def main(_argv):
         if img is None:
             logging.warning("Empty Frame")
             time.sleep(0.1)
-            continue
+            break
 
         img_in = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) 
         img_in = tf.expand_dims(img_in, 0)

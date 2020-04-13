@@ -1,7 +1,7 @@
 import time
 import os
 import hashlib
-
+import cv2
 from absl import app, flags, logging
 from absl.flags import FLAGS
 import tensorflow as tf
@@ -17,14 +17,13 @@ flags.DEFINE_string('classes', './data/voc2012.names', 'classes file')
 
 
 def build_example(annotation, class_map):
-    img_path = os.path.join(
-        FLAGS.data_dir, 'JPEGImages', annotation['filename'])
+    img_path = os.path.join(FLAGS.data_dir, FLAGS.split, 'JPEGImage',annotation['filename'])
     img_raw = open(img_path, 'rb').read()
+    if "RIFF".encode() in img_raw:
+        return None
     key = hashlib.sha256(img_raw).hexdigest()
-
     width = int(annotation['size']['width'])
     height = int(annotation['size']['height'])
-
     xmin = []
     ymin = []
     xmax = []
@@ -38,7 +37,6 @@ def build_example(annotation, class_map):
         for obj in annotation['object']:
             difficult = bool(int(obj['difficult']))
             difficult_obj.append(int(difficult))
-
             xmin.append(float(obj['bndbox']['xmin']) / width)
             ymin.append(float(obj['bndbox']['ymin']) / height)
             xmax.append(float(obj['bndbox']['xmax']) / width)
@@ -57,7 +55,7 @@ def build_example(annotation, class_map):
             annotation['filename'].encode('utf8')])),
         'image/key/sha256': tf.train.Feature(bytes_list=tf.train.BytesList(value=[key.encode('utf8')])),
         'image/encoded': tf.train.Feature(bytes_list=tf.train.BytesList(value=[img_raw])),
-        'image/format': tf.train.Feature(bytes_list=tf.train.BytesList(value=['jpeg'.encode('utf8')])),
+        'image/format': tf.train.Feature(bytes_list=tf.train.BytesList(value=['jpg'.encode('utf8')])),
         'image/object/bbox/xmin': tf.train.Feature(float_list=tf.train.FloatList(value=xmin)),
         'image/object/bbox/xmax': tf.train.Feature(float_list=tf.train.FloatList(value=xmax)),
         'image/object/bbox/ymin': tf.train.Feature(float_list=tf.train.FloatList(value=ymin)),
@@ -89,20 +87,24 @@ def parse_xml(xml):
 def main(_argv):
     class_map = {name: idx for idx, name in enumerate(
         open(FLAGS.classes).read().splitlines())}
+
     logging.info("Class mapping loaded: %s", class_map)
 
     writer = tf.io.TFRecordWriter(FLAGS.output_file)
-    image_list = open(os.path.join(
-        FLAGS.data_dir, 'ImageSets', 'Main', 'aeroplane_%s.txt' % FLAGS.split)).read().splitlines()
+    image_list = os.listdir(os.path.join(FLAGS.data_dir,FLAGS.split, 'JPEGImage'))
     logging.info("Image list loaded: %d", len(image_list))
     for image in tqdm.tqdm(image_list):
-        name, _ = image.split()
-        annotation_xml = os.path.join(
-            FLAGS.data_dir, 'Annotations', name + '.xml')
+        name, _ = image.split('.')
+        annotation_xml = os.path.join(FLAGS.data_dir, FLAGS.split, 'Annotation', name+'.xml')
         annotation_xml = lxml.etree.fromstring(open(annotation_xml).read())
         annotation = parse_xml(annotation_xml)['annotation']
+
+        
         tf_example = build_example(annotation, class_map)
-        writer.write(tf_example.SerializeToString())
+        if tf_example != None:
+            writer.write(tf_example.SerializeToString())
+        # print(tf_example)
+        # break
     writer.close()
     logging.info("Done")
 
